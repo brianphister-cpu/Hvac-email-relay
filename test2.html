@@ -1,0 +1,54 @@
+<!doctype html>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relay Test 2</title>
+<style>
+  body{font-family:system-ui,Arial;padding:14px;max-width:680px;margin:auto}
+  label{display:block;margin-top:10px;font-weight:700}
+  input,button{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid #ccd}
+  pre{background:#f6f8fa;border:1px solid #e1e4e8;padding:10px;border-radius:8px;white-space:pre-wrap}
+  button:disabled{opacity:.6}
+</style>
+<h1>HVAC Email Relay — Test</h1>
+<label>Endpoint (API URL)</label>
+<input id="ep" placeholder="https://YOUR-PROJECT.vercel.app/api/sendCsv">
+<label>Shared Secret</label>
+<input id="sec" placeholder="YOUR_SHARED_SECRET">
+<label>Send To (email)</label>
+<input id="to" placeholder="you@yourcompany.com">
+<button id="go">Send test email</button>
+<pre id="out">Idle…</pre>
+<script>
+function b64(s){return btoa(unescape(encodeURIComponent(s)))}
+const el = (id)=>document.getElementById(id);
+el('go').onclick = async ()=>{
+  const endpoint = el('ep').value.trim();
+  const secret   = el('sec').value.trim();
+  const to       = el('to').value.trim();
+  const out      = el('out');
+  if(!endpoint || !secret || !to){ out.textContent='Fill all fields first.'; return; }
+  const csv = 'a,b,c\n1,2,3\n4,5,6\n';
+  const body = JSON.stringify({
+    to,
+    subject:'HVAC Relay Test',
+    body:'CSV attached from relay test.',
+    filename:'test.csv',
+    contentBase64: b64(csv)
+  });
+  out.textContent = 'Sending…';
+  el('go').disabled = true;
+  try{
+    const r = await fetch(endpoint+'?ts='+Date.now(), {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-secret': secret },
+      body
+    });
+    const txt = await r.text();
+    out.textContent = 'Status '+r.status+': '+txt;
+    if(r.ok) alert('Email sent ✔');
+  }catch(e){
+    out.textContent = 'Network error: '+(e && e.message || e);
+  }finally{
+    el('go').disabled = false;
+  }
+};
+</script>
