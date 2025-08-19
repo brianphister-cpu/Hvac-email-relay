@@ -1,4 +1,5 @@
 import sgMail from '@sendgrid/mail';
+console.log("API key starts with:", process.env.SENDGRID_API_KEY?.substring(0,3));
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
