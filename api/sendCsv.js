@@ -1,38 +1,37 @@
-import sgMail from '@sendgrid/mail';
-console.log("API key starts with:SG", process.env.SENDGRID_API_KEY?.substring(0,3));
+const sgMail = require('@sendgrid/mail');
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-secret');
-  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-  if (req.headers['x-secret'] !== process.env.SHARED_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  const { to, subject, text, csvContent, secret } = req.body;
+
+  if (secret !== process.env.SHARED_SECRET) {
+    return res.status(403).json({ error: 'Forbidden: bad secret' });
   }
 
   try {
-    const { to, subject, body, filename, contentBase64 } = req.body || {};
-    if (!to || !filename || !contentBase64) {
-      return res.status(400).json({ error: 'Missing to/filename/contentBase64' });
-    }
-
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    await sgMail.send({
+    const msg = {
       to,
-      from: process.env.FROM_EMAIL, // your verified Single Sender in SendGrid
-      subject: subject || 'HVAC History CSV',
-      text: body || 'See attached CSV.',
-      attachments: [{
-        content: contentBase64,       // base64 only, no "data:" prefix
-        filename,
-        type: 'text/csv',
-        disposition: 'attachment'
-      }]
-    });
-
-    res.status(200).json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message || 'send failed' });
+      from: process.env.FROM_EMAIL,
+      subject,
+      text,
+      attachments: [
+        {
+          content: Buffer.from(csvContent).toString("base64"),
+          filename: "hvac_history.csv",
+          type: "text/csv",
+          disposition: "attachment",
+        },
+      ],
+    };
+    await sgMail.send(msg);
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 }
