@@ -1,4 +1,3 @@
-// api/sendCsv.js
 import sgMail from '@sendgrid/mail';
 
 export default async function handler(req, res) {
@@ -18,14 +17,13 @@ export default async function handler(req, res) {
     }
 
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
     await sgMail.send({
       to,
-      from: process.env.FROM_EMAIL,
+      from: process.env.FROM_EMAIL, // your verified Single Sender in SendGrid
       subject: subject || 'HVAC History CSV',
       text: body || 'See attached CSV.',
       attachments: [{
-        content: contentBase64,
+        content: contentBase64,       // base64 only, no "data:" prefix
         filename,
         type: 'text/csv',
         disposition: 'attachment'
@@ -34,7 +32,6 @@ export default async function handler(req, res) {
 
     res.status(200).json({ ok: true });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ error: e.message || 'send failed' });
   }
 }
